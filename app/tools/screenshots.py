@@ -25,7 +25,7 @@ async def take_screenshot(arguments: dict) -> ToolResult:
             output="url is required",
         )
 
-    if is_internal_address(url):
+    if await is_internal_address(url):
         return ToolResult(
             tool_name="take_screenshot",
             success=False,

@@ -13,8 +13,10 @@ _connections: dict[str, dict[str, str]] = {}
 
 _MUTATION_KEYWORDS = frozenset({
     "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE",
-    "CREATE", "GRANT", "REVOKE", "MERGE", "REPLACE",
+    "CREATE", "GRANT", "REVOKE", "MERGE",
 })
+
+_MUTATION_PHRASES = ("REPLACE INTO",)
 
 
 def _is_select_only(query: str) -> bool:
@@ -25,6 +27,9 @@ def _is_select_only(query: str) -> bool:
         return False
     for keyword in _MUTATION_KEYWORDS:
         if re.search(rf"\b{keyword}\b", normalized):
+            return False
+    for phrase in _MUTATION_PHRASES:
+        if phrase in normalized:
             return False
     return True
 

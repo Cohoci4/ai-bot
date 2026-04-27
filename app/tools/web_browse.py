@@ -63,7 +63,7 @@ async def _search(query: str) -> ToolResult:
 
 
 async def _open_page(url: str, extract_pattern: str | None) -> ToolResult:
-    if is_internal_address(url):
+    if await is_internal_address(url):
         return ToolResult(
             tool_name="browse_web",
             success=False,

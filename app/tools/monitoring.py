@@ -21,7 +21,7 @@ async def app_healthcheck(arguments: dict) -> ToolResult:
             output="endpoint is required",
         )
 
-    if is_internal_address(endpoint):
+    if await is_internal_address(endpoint):
         return ToolResult(
             tool_name="app_healthcheck",
             success=False,
