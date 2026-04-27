@@ -95,6 +95,12 @@ class AIEngine:
                                     tool_calls_data[idx]["arguments"] += tc.function.arguments
             except Exception as exc:
                 logger.warning("Streaming error, retrying without stream: %s", exc)
+                collected_content = ""
+                tool_calls_data = {}
+                yield WSMessage(
+                    type=WSMessageType.CONTENT_RESET,
+                    data={},
+                )
                 try:
                     fallback = await self.client.chat.completions.create(
                         model=OPENAI_MODEL,

@@ -65,6 +65,13 @@ function handleMessage(msg) {
             finishAssistant();
             break;
 
+        case "content_reset":
+            if (currentAssistantBubble) {
+                currentAssistantBubble._rawContent = "";
+                currentAssistantBubble.innerHTML = "";
+            }
+            break;
+
         case "tool_call":
             addToolCall(msg.data);
             break;

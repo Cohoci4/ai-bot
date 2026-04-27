@@ -66,6 +66,7 @@ class WSMessageType(str, Enum):
     CRITICAL_RESPONSE = "critical_response"
     ASSUMPTIONS_UPDATE = "assumptions_update"
     REPORT = "report"
+    CONTENT_RESET = "content_reset"
 
 
 class WSMessage(BaseModel):
