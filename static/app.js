@@ -230,7 +230,7 @@ function showCritical(command) {
 
 function respondCritical(confirmed) {
     if (confirmed) {
-        const inputVal = criticalInput.value.trim();
+        const inputVal = criticalInput.value.trim().toUpperCase();
         if (inputVal !== "CONFIRM CRITICAL") {
             criticalInput.classList.add("shake");
             setTimeout(() => criticalInput.classList.remove("shake"), 500);

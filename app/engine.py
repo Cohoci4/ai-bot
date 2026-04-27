@@ -8,7 +8,7 @@ from typing import Any, AsyncIterator, Callable, Coroutine
 
 from openai import AsyncOpenAI
 
-from app.config import OPENAI_API_KEY, OPENAI_MODEL
+from app.config import LLM_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL
 from app.models.schemas import ToolCall, ToolResult, WSMessage, WSMessageType
 from app.system_prompt import SYSTEM_PROMPT, TOOL_DEFINITIONS
 from app.tools.assumptions import AssumptionsManager
@@ -28,7 +28,7 @@ class AIEngine:
         approval_callback: Callable[[str], Coroutine[Any, Any, bool]] | None = None,
         critical_callback: Callable[[str], Coroutine[Any, Any, bool]] | None = None,
     ) -> None:
-        self.client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+        self.client = AsyncOpenAI(api_key=OPENAI_API_KEY, base_url=LLM_BASE_URL)
         self.task_manager = TaskManager()
         self.assumptions_manager = AssumptionsManager()
         self.tool_executor = ToolExecutor(

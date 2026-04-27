@@ -5,6 +5,7 @@ An elite autonomous AI software engineer that runs in your browser. Give it engi
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)
 ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-purple)
+![Groq](https://img.shields.io/badge/Groq-Llama_3.3-orange)
 
 ## Features
 
@@ -82,7 +83,22 @@ pip install -e .
 
 ```bash
 cp .env.example .env
-# Edit .env and add your OpenAI API key
+```
+
+**Option A: Groq (free, recommended for testing)**
+1. Get a free API key at https://console.groq.com
+2. Edit `.env`:
+```env
+OPENAI_API_KEY=gsk_your-groq-key
+OPENAI_MODEL=llama-3.3-70b-versatile
+LLM_BASE_URL=https://api.groq.com/openai/v1
+```
+
+**Option B: OpenAI (paid)**
+```env
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_MODEL=gpt-4o
+# LLM_BASE_URL not needed — uses OpenAI by default
 ```
 
 ### 4. Run the server
@@ -101,8 +117,9 @@ Navigate to `http://localhost:8000` and start chatting!
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENAI_API_KEY` | — | Your OpenAI API key (required) |
-| `OPENAI_MODEL` | `gpt-4o` | Model to use |
+| `OPENAI_API_KEY` | — | API key (OpenAI, Groq, or any OpenAI-compatible provider) |
+| `OPENAI_MODEL` | `gpt-4o` | Model name (`gpt-4o`, `llama-3.3-70b-versatile`, etc.) |
+| `LLM_BASE_URL` | — | Custom API base URL (e.g. `https://api.groq.com/openai/v1`) |
 | `WORKSPACE_DIR` | `./workspace` | Sandboxed directory for file operations |
 | `HOST` | `0.0.0.0` | Server host |
 | `PORT` | `8000` | Server port |
