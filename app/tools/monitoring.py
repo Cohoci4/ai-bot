@@ -2,11 +2,34 @@
 
 from __future__ import annotations
 
+import ipaddress
+import socket
 import time
+from urllib.parse import urlparse
 
 import httpx
 
 from app.models.schemas import ToolResult
+
+
+def _is_internal_address(url: str) -> bool:
+    """Check if a URL resolves to a private/loopback/link-local IP address."""
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return True
+
+        # Resolve hostname to IP
+        addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        for family, _, _, _, sockaddr in addr_info:
+            ip_str = sockaddr[0]
+            ip = ipaddress.ip_address(ip_str)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return True
+    except (socket.gaierror, ValueError, OSError):
+        return True
+    return False
 
 
 async def app_healthcheck(arguments: dict) -> ToolResult:
@@ -20,13 +43,11 @@ async def app_healthcheck(arguments: dict) -> ToolResult:
             output="endpoint is required",
         )
 
-    # Block internal network addresses unless explicitly allowed
-    blocked_prefixes = ("http://localhost", "http://127.0.0.1", "http://10.", "http://192.168.")
-    if any(endpoint.lower().startswith(p) for p in blocked_prefixes):
+    if _is_internal_address(endpoint):
         return ToolResult(
             tool_name="app_healthcheck",
             success=False,
-            output=f"Blocked: internal network address ({endpoint}). Health checks to internal IPs are restricted.",
+            output=f"Blocked: internal/private network address ({endpoint}). Health checks to internal IPs are restricted.",
         )
 
     try:

@@ -9,6 +9,7 @@ import httpx
 
 from app.config import WORKSPACE_DIR
 from app.models.schemas import ToolResult
+from app.tools.file_ops import _safe_path
 
 
 async def take_screenshot(arguments: dict) -> ToolResult:
@@ -67,8 +68,15 @@ async def visual_comparison(arguments: dict) -> ToolResult:
             output="Both screenshot1_path and screenshot2_path are required",
         )
 
-    file1 = WORKSPACE_DIR / path1
-    file2 = WORKSPACE_DIR / path2
+    try:
+        file1 = _safe_path(path1)
+        file2 = _safe_path(path2)
+    except PermissionError:
+        return ToolResult(
+            tool_name="visual_comparison",
+            success=False,
+            output="Path escapes workspace directory",
+        )
 
     if not file1.exists():
         return ToolResult(
