@@ -60,7 +60,7 @@ async def self_test(arguments: dict) -> ToolResult:
     # Check OpenAI key
     results["openai_key"] = "configured" if os.getenv("OPENAI_API_KEY") else "not set"
 
-    all_ok = all(v in ("ok", "configured") or v.startswith("Python") for v in results.values())
+    all_ok = all(v in ("ok", "configured", "empty (no saved knowledge)") or v.startswith("Python") for v in results.values())
     lines = [f"  {k}: {v}" for k, v in results.items()]
 
     return ToolResult(

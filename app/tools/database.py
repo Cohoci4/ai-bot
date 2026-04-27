@@ -24,7 +24,7 @@ def _is_select_only(query: str) -> bool:
     if ";" in normalized.rstrip(";").rstrip():
         return False
     for keyword in _MUTATION_KEYWORDS:
-        if keyword in normalized:
+        if re.search(rf"\b{keyword}\b", normalized):
             return False
     return True
 
