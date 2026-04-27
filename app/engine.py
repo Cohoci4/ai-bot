@@ -59,7 +59,7 @@ class AIEngine:
                     )
                     break
                 except RateLimitError as exc:
-                    wait_secs = 5 * (_retry + 1)
+                    wait_secs = 15 * (_retry + 1)
                     logger.warning("Rate limited, retrying in %ds: %s", wait_secs, exc)
                     yield WSMessage(
                         type=WSMessageType.ASSISTANT_CHUNK,
