@@ -11,7 +11,7 @@ from app.models.schemas import ToolResult
 def _safe_path(rel: str) -> Path:
     """Resolve a relative path inside the workspace, preventing traversal."""
     target = (WORKSPACE_DIR / rel).resolve()
-    if not str(target).startswith(str(WORKSPACE_DIR)):
+    if not target.is_relative_to(WORKSPACE_DIR):
         raise PermissionError("Path escapes workspace directory")
     return target
 

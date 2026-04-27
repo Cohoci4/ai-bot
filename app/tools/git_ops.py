@@ -16,7 +16,15 @@ async def _git(args: list[str]) -> tuple[int, str]:
         stderr=asyncio.subprocess.STDOUT,
         cwd=str(WORKSPACE_DIR),
     )
-    stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+    try:
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+            await proc.wait()
+        except Exception:
+            pass
+        return 1, "Git command timed out after 30 seconds"
     return proc.returncode or 0, stdout.decode(errors="replace")
 
 

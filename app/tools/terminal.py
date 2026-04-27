@@ -82,6 +82,11 @@ async def run_terminal_command(
         )
 
     except asyncio.TimeoutError:
+        try:
+            proc.kill()
+            await proc.wait()
+        except Exception:
+            pass
         return ToolResult(
             tool_name="run_terminal_command",
             success=False,
