@@ -26,6 +26,9 @@ function connect() {
 
     ws.onclose = () => {
         setStatus("disconnected", "Disconnected");
+        isStreaming = false;
+        currentAssistantBubble = null;
+        sendBtn.disabled = false;
         setTimeout(connect, 3000);
     };
 

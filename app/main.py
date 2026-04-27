@@ -65,8 +65,12 @@ async def websocket_endpoint(ws: WebSocket):
                 else:
                     await incoming_queue.put(data)
         except WebSocketDisconnect:
+            approval_result[0] = False
+            approval_event.set()
             await incoming_queue.put(None)
         except Exception:
+            approval_result[0] = False
+            approval_event.set()
             await incoming_queue.put(None)
 
     async def processor_task():
