@@ -10,6 +10,7 @@ import httpx
 from app.config import WORKSPACE_DIR
 from app.models.schemas import ToolResult
 from app.tools.file_ops import _safe_path
+from app.tools.network_utils import is_internal_address
 
 
 async def take_screenshot(arguments: dict) -> ToolResult:
@@ -24,8 +25,15 @@ async def take_screenshot(arguments: dict) -> ToolResult:
             output="url is required",
         )
 
+    if is_internal_address(url):
+        return ToolResult(
+            tool_name="take_screenshot",
+            success=False,
+            output=f"Blocked: internal/private network address ({url}). Screenshots of internal IPs are restricted.",
+        )
+
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
             resp = await client.get(url)
             resp.raise_for_status()
 

@@ -6,6 +6,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.models.schemas import ToolResult
+from app.tools.network_utils import is_internal_address
 
 _HEADERS = {
     "User-Agent": "DevinX-Bot/0.1 (https://github.com/Cohoci4/ai-bot)"
@@ -62,8 +63,15 @@ async def _search(query: str) -> ToolResult:
 
 
 async def _open_page(url: str, extract_pattern: str | None) -> ToolResult:
+    if is_internal_address(url):
+        return ToolResult(
+            tool_name="browse_web",
+            success=False,
+            output=f"Blocked: internal/private network address ({url}). Browsing internal IPs is restricted.",
+        )
+
     try:
-        async with httpx.AsyncClient(headers=_HEADERS, timeout=15, follow_redirects=True) as client:
+        async with httpx.AsyncClient(headers=_HEADERS, timeout=15, follow_redirects=False) as client:
             resp = await client.get(url)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")

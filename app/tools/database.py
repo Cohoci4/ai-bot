@@ -11,9 +11,22 @@ from app.models.schemas import ToolResult
 _connections: dict[str, dict[str, str]] = {}
 
 
+_MUTATION_KEYWORDS = frozenset({
+    "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE",
+    "CREATE", "GRANT", "REVOKE", "MERGE", "REPLACE",
+})
+
+
 def _is_select_only(query: str) -> bool:
     normalized = query.strip().upper()
-    return normalized.startswith("SELECT") or normalized.startswith("EXPLAIN")
+    if not (normalized.startswith("SELECT") or normalized.startswith("EXPLAIN")):
+        return False
+    if ";" in normalized.rstrip(";").rstrip():
+        return False
+    for keyword in _MUTATION_KEYWORDS:
+        if keyword in normalized:
+            return False
+    return True
 
 
 async def db_query(arguments: dict) -> ToolResult:
