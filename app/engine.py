@@ -64,34 +64,66 @@ class AIEngine:
             collected_content = ""
             tool_calls_data: dict[int, dict[str, Any]] = {}
 
-            async for chunk in response:
-                delta = chunk.choices[0].delta if chunk.choices else None
-                if delta is None:
-                    continue
+            try:
+                async for chunk in response:
+                    delta = chunk.choices[0].delta if chunk.choices else None
+                    if delta is None:
+                        continue
 
-                if delta.content:
-                    collected_content += delta.content
-                    yield WSMessage(
-                        type=WSMessageType.ASSISTANT_CHUNK,
-                        data={"content": delta.content},
+                    if delta.content:
+                        collected_content += delta.content
+                        yield WSMessage(
+                            type=WSMessageType.ASSISTANT_CHUNK,
+                            data={"content": delta.content},
+                        )
+
+                    if delta.tool_calls:
+                        for tc in delta.tool_calls:
+                            idx = tc.index
+                            if idx not in tool_calls_data:
+                                tool_calls_data[idx] = {
+                                    "id": tc.id or "",
+                                    "name": "",
+                                    "arguments": "",
+                                }
+                            if tc.id:
+                                tool_calls_data[idx]["id"] = tc.id
+                            if tc.function:
+                                if tc.function.name:
+                                    tool_calls_data[idx]["name"] = tc.function.name
+                                if tc.function.arguments:
+                                    tool_calls_data[idx]["arguments"] += tc.function.arguments
+            except Exception as exc:
+                logger.warning("Streaming error, retrying without stream: %s", exc)
+                try:
+                    fallback = await self.client.chat.completions.create(
+                        model=OPENAI_MODEL,
+                        messages=self.messages,
+                        tools=TOOL_DEFINITIONS,
+                        tool_choice="auto",
+                        stream=False,
                     )
-
-                if delta.tool_calls:
-                    for tc in delta.tool_calls:
-                        idx = tc.index
-                        if idx not in tool_calls_data:
-                            tool_calls_data[idx] = {
-                                "id": tc.id or "",
-                                "name": "",
-                                "arguments": "",
+                    choice = fallback.choices[0]
+                    if choice.message.content:
+                        collected_content = choice.message.content
+                        yield WSMessage(
+                            type=WSMessageType.ASSISTANT_CHUNK,
+                            data={"content": collected_content},
+                        )
+                    if choice.message.tool_calls:
+                        for tc in choice.message.tool_calls:
+                            tool_calls_data[len(tool_calls_data)] = {
+                                "id": tc.id,
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
                             }
-                        if tc.id:
-                            tool_calls_data[idx]["id"] = tc.id
-                        if tc.function:
-                            if tc.function.name:
-                                tool_calls_data[idx]["name"] = tc.function.name
-                            if tc.function.arguments:
-                                tool_calls_data[idx]["arguments"] += tc.function.arguments
+                except Exception as exc2:
+                    logger.exception("Fallback also failed: %s", exc2)
+                    yield WSMessage(
+                        type=WSMessageType.ERROR,
+                        data={"message": f"AI error: {exc2}"},
+                    )
+                    return
 
             if collected_content and not tool_calls_data:
                 self.messages.append({"role": "assistant", "content": collected_content})
