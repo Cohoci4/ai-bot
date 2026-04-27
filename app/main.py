@@ -18,7 +18,7 @@ from app.models.schemas import WSMessage, WSMessageType
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="DevinX AI Bot", version="0.1.0")
+app = FastAPI(title="DevinX Ultimate", version="0.2.0")
 
 # Serve static assets
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -36,10 +36,13 @@ async def websocket_endpoint(ws: WebSocket):
 
     approval_event: asyncio.Event = asyncio.Event()
     approval_result: list[bool] = [False]
-    incoming_queue: asyncio.Queue[dict] = asyncio.Queue()
+
+    critical_event: asyncio.Event = asyncio.Event()
+    critical_result: list[bool] = [False]
+
+    incoming_queue: asyncio.Queue[dict | None] = asyncio.Queue()
 
     async def approval_callback(command: str) -> bool:
-        """Send approval request to user and wait for response."""
         await ws.send_text(
             WSMessage(
                 type=WSMessageType.APPROVAL_REQUEST,
@@ -50,10 +53,23 @@ async def websocket_endpoint(ws: WebSocket):
         await approval_event.wait()
         return approval_result[0]
 
-    engine = AIEngine(approval_callback=approval_callback)
+    async def critical_callback(command: str) -> bool:
+        await ws.send_text(
+            WSMessage(
+                type=WSMessageType.CRITICAL_REQUEST,
+                data={"command": command},
+            ).model_dump_json()
+        )
+        critical_event.clear()
+        await critical_event.wait()
+        return critical_result[0]
+
+    engine = AIEngine(
+        approval_callback=approval_callback,
+        critical_callback=critical_callback,
+    )
 
     async def reader_task():
-        """Continuously read from WebSocket and dispatch messages."""
         try:
             while True:
                 raw = await ws.receive_text()
@@ -62,19 +78,25 @@ async def websocket_endpoint(ws: WebSocket):
                 if data.get("type") == "approval_response":
                     approval_result[0] = data.get("approved", False)
                     approval_event.set()
+                elif data.get("type") == "critical_response":
+                    critical_result[0] = data.get("confirmed", False)
+                    critical_event.set()
                 else:
                     await incoming_queue.put(data)
         except WebSocketDisconnect:
             approval_result[0] = False
             approval_event.set()
+            critical_result[0] = False
+            critical_event.set()
             await incoming_queue.put(None)
         except Exception:
             approval_result[0] = False
             approval_event.set()
+            critical_result[0] = False
+            critical_event.set()
             await incoming_queue.put(None)
 
     async def processor_task():
-        """Process user messages from the queue."""
         try:
             while True:
                 data = await incoming_queue.get()

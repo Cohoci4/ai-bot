@@ -1,4 +1,4 @@
-"""Terminal command execution tool with approval gating for destructive ops."""
+"""Terminal command execution with 3-tier safety: safe, requires_approval, critical."""
 
 from __future__ import annotations
 
@@ -23,18 +23,45 @@ DANGEROUS_PATTERNS = [
     "truncate",
 ]
 
+CRITICAL_PATTERNS = [
+    "rm -rf /",
+    "mkfs",
+    "dd if=",
+    "> /dev/",
+    ":(){ :|:& };:",
+    "drop database",
+    "--force-with-lease",
+    "git push --force",
+    "git push -f",
+]
 
-def _is_dangerous(command: str) -> bool:
+
+def _classify_safety(command: str, explicit_level: str) -> str:
+    """Determine the effective safety level for a command."""
     cmd_lower = command.lower()
-    return any(pat in cmd_lower for pat in DANGEROUS_PATTERNS)
+
+    if explicit_level == "critical":
+        return "critical"
+
+    if any(pat in cmd_lower for pat in CRITICAL_PATTERNS):
+        return "critical"
+
+    if explicit_level == "requires_approval":
+        return "requires_approval"
+
+    if any(pat in cmd_lower for pat in DANGEROUS_PATTERNS):
+        return "requires_approval"
+
+    return explicit_level or "safe"
 
 
 async def run_terminal_command(
     arguments: dict,
     approval_callback: Callable[[str], Coroutine[Any, Any, bool]] | None = None,
+    critical_callback: Callable[[str], Coroutine[Any, Any, bool]] | None = None,
 ) -> ToolResult:
     command = arguments.get("command", "")
-    requires_approval = arguments.get("requires_approval", False)
+    explicit_level = arguments.get("safety_level", "safe")
 
     if not command.strip():
         return ToolResult(
@@ -43,7 +70,27 @@ async def run_terminal_command(
             output="Empty command",
         )
 
-    if requires_approval or _is_dangerous(command):
+    safety_level = _classify_safety(command, explicit_level)
+
+    if safety_level == "critical":
+        cb = critical_callback or approval_callback
+        if cb is not None:
+            approved = await cb(command)
+            if not approved:
+                return ToolResult(
+                    tool_name="run_terminal_command",
+                    success=False,
+                    output="CRITICAL command rejected by user",
+                    data={"safety_level": "critical"},
+                )
+        else:
+            return ToolResult(
+                tool_name="run_terminal_command",
+                success=False,
+                output="CRITICAL command requires explicit confirmation but no callback provided",
+                data={"safety_level": "critical"},
+            )
+    elif safety_level == "requires_approval":
         if approval_callback is not None:
             approved = await approval_callback(command)
             if not approved:
@@ -51,12 +98,14 @@ async def run_terminal_command(
                     tool_name="run_terminal_command",
                     success=False,
                     output="Command rejected by user",
+                    data={"safety_level": "requires_approval"},
                 )
         else:
             return ToolResult(
                 tool_name="run_terminal_command",
                 success=False,
-                output="Destructive command requires approval but no callback provided",
+                output="Command requires approval but no callback provided",
+                data={"safety_level": "requires_approval"},
             )
 
     try:
@@ -78,7 +127,7 @@ async def run_terminal_command(
             tool_name="run_terminal_command",
             success=proc.returncode == 0,
             output=output,
-            data={"exit_code": proc.returncode},
+            data={"exit_code": proc.returncode, "safety_level": safety_level},
         )
 
     except asyncio.TimeoutError:
@@ -91,10 +140,12 @@ async def run_terminal_command(
             tool_name="run_terminal_command",
             success=False,
             output="Command timed out after 60 seconds",
+            data={"safety_level": safety_level},
         )
     except Exception as exc:
         return ToolResult(
             tool_name="run_terminal_command",
             success=False,
             output=f"Error: {exc}",
+            data={"safety_level": safety_level},
         )

@@ -1,6 +1,6 @@
-# ⚡ DevinX — AI Software Engineer Bot
+# ⚡ DevinX Ultimate — Elite AI Software Engineer
 
-An autonomous AI software engineer that runs in your browser. Give it engineering tasks and it will plan, code, test, and commit — all in a sandboxed workspace.
+An elite autonomous AI software engineer that runs in your browser. Give it engineering tasks and it will plan, code, test, and commit — all in a sandboxed workspace with 32 tools, 3-tier safety, and persistent memory.
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green)
@@ -8,14 +8,24 @@ An autonomous AI software engineer that runs in your browser. Give it engineerin
 
 ## Features
 
-- **🧠 AI-Powered Planning** — Breaks down tasks into subtasks with tracking
+### Core
+- **🧠 AI-Powered Planning** — Breaks down tasks into subtasks with estimation and tracking
 - **📁 File Operations** — Read, write, and edit files in the sandboxed workspace
-- **💻 Terminal Access** — Run shell commands with approval gating for destructive ops
-- **🌐 Web Browsing** — Search the web and fetch documentation
+- **💻 Terminal (3-Tier Safety)** — `safe` (immediate), `requires_approval` (user confirms), `critical` (must type "CONFIRM CRITICAL")
+- **🌐 Web Browsing** — Search, fetch pages, take screenshots, and compare visual output
 - **🔀 Git Integration** — Status, branch, add, commit, diff
-- **📋 Task Management** — Visual task board in the sidebar
-- **⚡ Real-time Streaming** — WebSocket-based streaming responses
-- **🔒 Safety** — Dangerous commands require explicit user approval
+
+### New in v0.2.0
+- **🗄️ Database Interaction** — Read-only queries (SELECT) + approved mutations (INSERT/UPDATE/DDL)
+- **🚀 CI/CD & Deployment** — Pipeline status, trigger builds, get logs, preview/staging deploys
+- **🏥 Health Monitoring** — Check service endpoints for status and response time
+- **📸 Screenshots & Visual Comparison** — Capture pages and compare with similarity scoring
+- **🧠 Memory & Learning** — Persistent knowledge store (memorize/recall), learns from mistakes
+- **📝 Assumptions Tracking** — Log and verify assumptions before finalizing work
+- **📊 Report Generation** — Standalone HTML reports with tasks, assumptions, and status
+- **🔗 Jira & Slack Integration** — Update issues and notify channels
+- **🔧 Self-Diagnosis & Recovery** — Verify all subsystems, restore state after restarts
+- **📋 32 Tools** — Full tool suite available via OpenAI function calling
 
 ## Architecture
 
@@ -25,16 +35,24 @@ ai-bot/
 │   ├── main.py              # FastAPI app + WebSocket endpoint
 │   ├── engine.py             # AI reasoning loop (OpenAI + tool calls)
 │   ├── config.py             # Environment configuration
-│   ├── system_prompt.py      # System prompt + tool definitions
+│   ├── system_prompt.py      # System prompt + 32 tool definitions
 │   ├── models/
 │   │   └── schemas.py        # Pydantic models
 │   └── tools/
-│       ├── executor.py       # Central tool router
+│       ├── executor.py       # Central tool router (32 tools)
 │       ├── task_manager.py   # Task CRUD operations
+│       ├── assumptions.py    # Assumptions tracking
 │       ├── file_ops.py       # File read/write/edit
-│       ├── terminal.py       # Shell command execution
+│       ├── terminal.py       # Shell execution (3-tier safety)
 │       ├── git_ops.py        # Git operations
-│       └── web_browse.py     # Web search & page fetching
+│       ├── web_browse.py     # Web search & page fetching
+│       ├── screenshots.py    # Screenshots & visual comparison
+│       ├── database.py       # DB queries & mutations
+│       ├── ci_cd.py          # CI/CD pipeline management
+│       ├── monitoring.py     # Health checks
+│       ├── memory.py         # Persistent knowledge store
+│       ├── integrations.py   # Jira, Slack, reports
+│       └── diagnostics.py    # Self-test & state recovery
 ├── static/
 │   ├── index.html            # Chat UI
 │   ├── style.css             # Styles (dark theme)
@@ -58,8 +76,6 @@ cd ai-bot
 
 ```bash
 pip install -e .
-# or
-pip install fastapi uvicorn openai python-dotenv httpx beautifulsoup4 jinja2 websockets
 ```
 
 ### 3. Configure environment
@@ -95,18 +111,27 @@ Navigate to `http://localhost:8000` and start chatting!
 
 1. **User sends a message** via the chat UI
 2. **WebSocket** delivers it to the FastAPI backend
-3. **AI Engine** sends the conversation to OpenAI with tool definitions
+3. **AI Engine** sends the conversation to OpenAI with 32 tool definitions
 4. **OpenAI responds** with text and/or tool calls
-5. **Tool Executor** runs the requested tools (files, terminal, git, etc.)
+5. **Tool Executor** routes to the appropriate tool implementation
 6. **Results stream back** to the UI in real-time
 7. The loop continues until the AI finishes its response
 
-## Safety
+## Safety (3-Tier System)
 
-- File operations are restricted to the `workspace/` directory
-- Dangerous terminal commands require explicit user approval
-- Path traversal attacks are prevented
-- Commands time out after 60 seconds
+| Level | Behavior | Examples |
+|-------|----------|---------|
+| **safe** | Executes immediately | `ls`, `git status`, `npm test`, `cat` |
+| **requires_approval** | Pauses for user confirmation | `npm install`, `git push`, config changes |
+| **critical** | User must type "CONFIRM CRITICAL" | `rm -rf`, `drop database`, force push |
+
+Additional safety:
+- File operations restricted to `workspace/` directory
+- Path traversal prevention (`Path.is_relative_to()`)
+- Database mutations always require approval
+- Health checks block internal network addresses
+- CI/CD triggers and deployments require approval
+- Subprocess cleanup on timeout (kill + wait)
 
 ## License
 

@@ -3,28 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DevinX — AI Software Engineer</title>
+    <title>DevinX Ultimate — AI Software Engineer</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app">
-        <!-- Sidebar: Tasks -->
+        <!-- Sidebar -->
         <aside id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
                     <span class="logo-icon">⚡</span>
-                    <span class="logo-text">DevinX</span>
+                    <span class="logo-text">DevinX Ultimate</span>
                 </div>
-                <span class="subtitle">AI Software Engineer</span>
+                <span class="subtitle">Elite AI Software Engineer</span>
             </div>
-            <div class="task-section">
+
+            <!-- Tasks Section -->
+            <div class="sidebar-section">
                 <h3>📋 Tasks</h3>
                 <div id="task-list" class="task-list">
                     <p class="empty-state">No tasks yet. Start a conversation!</p>
                 </div>
             </div>
+
+            <!-- Assumptions Section -->
+            <div class="sidebar-section">
+                <h3>💡 Assumptions</h3>
+                <div id="assumptions-list" class="assumptions-list">
+                    <p class="empty-state">No assumptions logged.</p>
+                </div>
+            </div>
+
             <div class="sidebar-footer">
                 <div class="status-indicator" id="status-indicator">
                     <span class="status-dot disconnected"></span>
@@ -37,15 +48,21 @@
         <main id="chat-area">
             <div id="messages" class="messages">
                 <div class="welcome-message">
-                    <h1>👋 Hello! I'm <span class="accent">DevinX</span></h1>
-                    <p>I'm your autonomous AI software engineer. I can:</p>
+                    <h1>👋 Hello! I'm <span class="accent">DevinX Ultimate</span></h1>
+                    <p>I'm your elite autonomous AI software engineer. I can:</p>
                     <div class="capabilities">
                         <div class="cap-item">📁 Read, write & edit files</div>
-                        <div class="cap-item">💻 Run terminal commands</div>
-                        <div class="cap-item">🌐 Browse the web & search docs</div>
+                        <div class="cap-item">💻 Run terminal (3-tier safety)</div>
+                        <div class="cap-item">🌐 Browse web & take screenshots</div>
                         <div class="cap-item">🔀 Manage Git repos</div>
                         <div class="cap-item">📋 Plan & track tasks</div>
-                        <div class="cap-item">🧠 Reason & solve problems</div>
+                        <div class="cap-item">🧠 Learn & remember</div>
+                        <div class="cap-item">🗄️ Query databases</div>
+                        <div class="cap-item">🚀 CI/CD & deployments</div>
+                        <div class="cap-item">📊 Generate reports</div>
+                        <div class="cap-item">🏥 Health checks</div>
+                        <div class="cap-item">📝 Track assumptions</div>
+                        <div class="cap-item">🔗 Jira & Slack integration</div>
                     </div>
                     <p>Tell me what you'd like to build or fix!</p>
                 </div>
@@ -55,12 +72,38 @@
             <div id="approval-modal" class="modal hidden">
                 <div class="modal-content">
                     <h3>⚠️ Approval Required</h3>
-                    <p>The AI wants to run a potentially destructive command:</p>
+                    <p>The AI wants to run a command that requires your approval:</p>
                     <pre id="approval-command"></pre>
                     <div class="modal-actions">
                         <button class="btn btn-danger" onclick="respondApproval(false)">Reject</button>
                         <button class="btn btn-success" onclick="respondApproval(true)">Approve</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Critical Approval Modal -->
+            <div id="critical-modal" class="modal hidden">
+                <div class="modal-content critical">
+                    <h3>🚨 CRITICAL — Irreversible Operation</h3>
+                    <p>The AI wants to run a <strong>critical, irreversible</strong> command:</p>
+                    <pre id="critical-command"></pre>
+                    <p class="critical-warning">Type <code>CONFIRM CRITICAL</code> below to proceed:</p>
+                    <input type="text" id="critical-input" class="critical-input" placeholder="Type CONFIRM CRITICAL" autocomplete="off">
+                    <div class="modal-actions">
+                        <button class="btn btn-danger" onclick="respondCritical(false)">Cancel</button>
+                        <button class="btn btn-critical" onclick="respondCritical(true)">Execute</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Modal -->
+            <div id="report-modal" class="modal hidden">
+                <div class="modal-content report-modal-content">
+                    <div class="report-header">
+                        <h3 id="report-title">Report</h3>
+                        <button class="btn btn-secondary" onclick="closeReport()">Close</button>
+                    </div>
+                    <iframe id="report-frame" class="report-frame"></iframe>
                 </div>
             </div>
 
@@ -78,7 +121,7 @@
                         </svg>
                     </button>
                 </div>
-                <p class="input-hint">Powered by OpenAI • Tools run in a sandboxed workspace</p>
+                <p class="input-hint">Powered by OpenAI • 3-tier safety • 32 tools available</p>
             </div>
         </main>
     </div>

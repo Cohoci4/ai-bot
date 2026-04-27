@@ -62,6 +62,10 @@ class WSMessageType(str, Enum):
     ERROR = "error"
     APPROVAL_REQUEST = "approval_request"
     APPROVAL_RESPONSE = "approval_response"
+    CRITICAL_REQUEST = "critical_request"
+    CRITICAL_RESPONSE = "critical_response"
+    ASSUMPTIONS_UPDATE = "assumptions_update"
+    REPORT = "report"
 
 
 class WSMessage(BaseModel):

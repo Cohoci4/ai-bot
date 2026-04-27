@@ -1,7 +1,7 @@
 [project]
 name = "ai-bot"
-version = "0.1.0"
-description = "DevinX — autonomous AI software engineer bot"
+version = "0.2.0"
+description = "DevinX Ultimate — elite autonomous AI software engineer bot"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

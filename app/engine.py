@@ -11,6 +11,7 @@ from openai import AsyncOpenAI
 from app.config import OPENAI_API_KEY, OPENAI_MODEL
 from app.models.schemas import ToolCall, ToolResult, WSMessage, WSMessageType
 from app.system_prompt import SYSTEM_PROMPT, TOOL_DEFINITIONS
+from app.tools.assumptions import AssumptionsManager
 from app.tools.executor import ToolExecutor
 from app.tools.task_manager import TaskManager
 
@@ -25,10 +26,17 @@ class AIEngine:
     def __init__(
         self,
         approval_callback: Callable[[str], Coroutine[Any, Any, bool]] | None = None,
+        critical_callback: Callable[[str], Coroutine[Any, Any, bool]] | None = None,
     ) -> None:
         self.client = AsyncOpenAI(api_key=OPENAI_API_KEY)
         self.task_manager = TaskManager()
-        self.tool_executor = ToolExecutor(self.task_manager, approval_callback)
+        self.assumptions_manager = AssumptionsManager()
+        self.tool_executor = ToolExecutor(
+            self.task_manager,
+            self.assumptions_manager,
+            approval_callback,
+            critical_callback,
+        )
         self.messages: list[dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT}
         ]
@@ -61,7 +69,6 @@ class AIEngine:
                 if delta is None:
                     continue
 
-                # Stream text content
                 if delta.content:
                     collected_content += delta.content
                     yield WSMessage(
@@ -69,7 +76,6 @@ class AIEngine:
                         data={"content": delta.content},
                     )
 
-                # Collect tool call fragments
                 if delta.tool_calls:
                     for tc in delta.tool_calls:
                         idx = tc.index
@@ -87,13 +93,11 @@ class AIEngine:
                             if tc.function.arguments:
                                 tool_calls_data[idx]["arguments"] += tc.function.arguments
 
-            # If we got text content with no tool calls, we're done
             if collected_content and not tool_calls_data:
                 self.messages.append({"role": "assistant", "content": collected_content})
                 yield WSMessage(type=WSMessageType.ASSISTANT_DONE, data={})
                 return
 
-            # Build the assistant message with tool calls
             assistant_msg: dict[str, Any] = {"role": "assistant", "content": collected_content or None}
             if tool_calls_data:
                 assistant_msg["tool_calls"] = []
@@ -113,7 +117,6 @@ class AIEngine:
                 yield WSMessage(type=WSMessageType.ASSISTANT_DONE, data={})
                 return
 
-            # Execute each tool call
             for idx in sorted(tool_calls_data):
                 tc_data = tool_calls_data[idx]
                 tool_name = tc_data["name"]
@@ -140,21 +143,32 @@ class AIEngine:
                     },
                 )
 
-                # If this is a task update, send task info
+                # Task sidebar update
                 if tool_name == "task":
                     yield WSMessage(
                         type=WSMessageType.TASK_UPDATE,
                         data={"tasks": [t.model_dump() for t in self.task_manager.tasks]},
                     )
 
-                # Add tool result to conversation
+                # Assumptions update
+                if tool_name == "assumptions_log":
+                    yield WSMessage(
+                        type=WSMessageType.ASSUMPTIONS_UPDATE,
+                        data={"assumptions": self.assumptions_manager.assumptions},
+                    )
+
+                # Report generation — send HTML to client
+                if tool_name == "generate_report" and result.success and result.data:
+                    yield WSMessage(
+                        type=WSMessageType.REPORT,
+                        data={"html": result.data.get("html", ""), "title": result.data.get("title", "")},
+                    )
+
                 self.messages.append({
                     "role": "tool",
                     "tool_call_id": tc_data["id"],
                     "content": result.output,
                 })
-
-            # Loop continues so the model can process tool results
 
         yield WSMessage(
             type=WSMessageType.ERROR,
