@@ -112,12 +112,13 @@ async def run_terminal_command(
         env = os.environ.copy()
         proc = await asyncio.create_subprocess_shell(
             command,
+            stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             cwd=str(WORKSPACE_DIR),
             env=env,
         )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
         output = stdout.decode(errors="replace")
 
         if len(output) > 10_000:
@@ -139,7 +140,7 @@ async def run_terminal_command(
         return ToolResult(
             tool_name="run_terminal_command",
             success=False,
-            output="Command timed out after 60 seconds",
+            output="Command timed out after 30 seconds (interactive programs are not supported)",
             data={"safety_level": safety_level},
         )
     except Exception as exc:

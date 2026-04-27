@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, AsyncIterator, Callable, Coroutine
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, RateLimitError
 
 from app.config import LLM_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL
 from app.models.schemas import ToolCall, ToolResult, WSMessage, WSMessageType
@@ -46,18 +47,35 @@ class AIEngine:
         self.messages.append({"role": "user", "content": user_message})
 
         for _round in range(MAX_TOOL_ROUNDS):
-            try:
-                response = await self.client.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    messages=self.messages,
-                    tools=TOOL_DEFINITIONS,
-                    tool_choice="auto",
-                    stream=True,
-                )
-            except Exception as exc:
+            response = None
+            for _retry in range(3):
+                try:
+                    response = await self.client.chat.completions.create(
+                        model=OPENAI_MODEL,
+                        messages=self.messages,
+                        tools=TOOL_DEFINITIONS,
+                        tool_choice="auto",
+                        stream=True,
+                    )
+                    break
+                except RateLimitError as exc:
+                    wait_secs = 5 * (_retry + 1)
+                    logger.warning("Rate limited, retrying in %ds: %s", wait_secs, exc)
+                    yield WSMessage(
+                        type=WSMessageType.ASSISTANT_CHUNK,
+                        data={"content": f"\n⏳ Rate limited, retrying in {wait_secs}s...\n"},
+                    )
+                    await asyncio.sleep(wait_secs)
+                except Exception as exc:
+                    yield WSMessage(
+                        type=WSMessageType.ERROR,
+                        data={"message": f"API error: {exc}"},
+                    )
+                    return
+            if response is None:
                 yield WSMessage(
                     type=WSMessageType.ERROR,
-                    data={"message": f"OpenAI API error: {exc}"},
+                    data={"message": "Rate limit exceeded after retries. Please wait a minute and try again."},
                 )
                 return
 
